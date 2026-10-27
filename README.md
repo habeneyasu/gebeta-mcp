@@ -8,7 +8,7 @@ An MCP server for the traditional Gebeta board game, featuring a deterministic P
 
 ## Status
 
-The domain engine and application layer are complete and tested against the acceptance criteria in spec §18. The API, MCP server, agents, and UI come next.
+The domain engine and application layer are complete and tested against the acceptance criteria in spec §18. The REST API is in place; the MCP server, agents, and UI come next.
 
 | Module | Purpose | Criteria (spec §18) | Status |
 |---|---|---|---|
@@ -22,6 +22,7 @@ The domain engine and application layer are complete and tested against the acce
 | `infrastructure/` | `InMemoryGameRepository` | — | Done |
 | `config.py` | `Settings` from `GEBETA_*` environment variables (see `.env.example`) | — | Done |
 | `schemas.py`, `mapping.py` | Pydantic wire contract and domain-to-wire conversion | — | Done |
+| `api/` | FastAPI app: `/games` REST endpoints, `/health`, `ErrorOut` error handling | — | Done |
 
 The game ends when neither player has a legal move or after 20 consecutive moves without a capture; moves that loop or exceed 10,000 seed drops are illegal (spec §5.1, §11.2, §20).
 
