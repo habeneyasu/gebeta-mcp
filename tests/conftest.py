@@ -1,8 +1,12 @@
-"""Shared fixtures: game service, FastAPI test client, and in-memory MCP client."""
+"""Shared fixtures: game service, FastAPI test client, MCP client, and a live server."""
 
-from collections.abc import AsyncIterator
+import socket
+import threading
+import time
+from collections.abc import AsyncIterator, Iterator
 
 import pytest
+import uvicorn
 from fastapi.testclient import TestClient
 
 from gebeta.api.app import create_app
@@ -37,3 +41,23 @@ async def mcp_client(service: GameService) -> AsyncIterator[GebetaClient]:
     """
     async with GebetaClient(create_mcp_server(service)) as client:
         yield client
+
+
+@pytest.fixture
+def server_url() -> Iterator[str]:
+    """The FastAPI app (REST and MCP) served by uvicorn on a free local port."""
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    server = uvicorn.Server(
+        uvicorn.Config(create_app(Settings()), host="127.0.0.1", port=port, log_level="warning")
+    )
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    deadline = time.monotonic() + 10
+    while not server.started:
+        assert time.monotonic() < deadline, "server did not start"
+        time.sleep(0.02)
+    yield f"http://127.0.0.1:{port}"
+    server.should_exit = True
+    thread.join(timeout=10)
