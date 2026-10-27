@@ -8,7 +8,7 @@ converts domain values into these models.
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Strict
 
 PlayerNumber = Literal[1, 2]
 StatusName = Literal["active", "completed"]
@@ -45,12 +45,17 @@ def _reject_bool(value: object) -> object:
     return value
 
 
+StartingPlayer = Annotated[PlayerNumber, BeforeValidator(_reject_bool)]
+Pit = Annotated[int, Strict()]
+"""Any integer; the engine reports out-of-range pits as `invalid_pit`."""
+
+
 class NewGameRequest(Request):
-    starting_player: Annotated[PlayerNumber, BeforeValidator(_reject_bool)] = 1
+    starting_player: StartingPlayer = 1
 
 
 class PlayMoveRequest(Request):
-    pit: int
+    pit: Pit
 
 
 class SeedTotalsOut(Response):
