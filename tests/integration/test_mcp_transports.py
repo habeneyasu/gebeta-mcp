@@ -1,39 +1,11 @@
 """MCP over its real transports: streamable HTTP at /mcp and stdio."""
 
-import socket
-import threading
-import time
-from collections.abc import Iterator
-
 import httpx
 import pytest
-import uvicorn
 
-from gebeta.api.app import create_app
-from gebeta.config import Settings
 from gebeta.mcp.client import GebetaClient
 
 pytestmark = pytest.mark.anyio
-
-
-@pytest.fixture
-def server_url() -> Iterator[str]:
-    """The FastAPI app (REST and MCP) served by uvicorn on a free local port."""
-    with socket.socket() as probe:
-        probe.bind(("127.0.0.1", 0))
-        port = probe.getsockname()[1]
-    server = uvicorn.Server(
-        uvicorn.Config(create_app(Settings()), host="127.0.0.1", port=port, log_level="warning")
-    )
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    deadline = time.monotonic() + 10
-    while not server.started:
-        assert time.monotonic() < deadline, "server did not start"
-        time.sleep(0.02)
-    yield f"http://127.0.0.1:{port}"
-    server.should_exit = True
-    thread.join(timeout=10)
 
 
 async def test_http_mcp_shares_games_with_rest(server_url: str) -> None:

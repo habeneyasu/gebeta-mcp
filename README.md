@@ -8,7 +8,7 @@ An MCP server for the traditional Gebeta board game, featuring a deterministic P
 
 ## Status
 
-The domain engine and application layer are complete and tested against the acceptance criteria in spec §18. The REST API and MCP server are in place; agents, the UI, and the CLI come next.
+The domain engine and application layer are complete and tested against the acceptance criteria in spec §18. The REST API, MCP server, and agents are in place; the UI and the CLI come next.
 
 | Module | Purpose | Criteria (spec §18) | Status |
 |---|---|---|---|
@@ -24,6 +24,7 @@ The domain engine and application layer are complete and tested against the acce
 | `schemas.py` | Pydantic wire contract shared by the API, MCP server, and MCP client | — | Done |
 | `api/` | FastAPI app: `/games` REST endpoints, `/health`, `ErrorOut` error handling | — | Done |
 | `mcp/` | MCP server (tools, `gebeta://rules`) at `/mcp` and over stdio; typed `GebetaClient` | 37 | Done |
+| `agents/` | `RandomAgent`, `GreedyAgent`, `ClaudeAgent`, and the `run_match` controller | 38 | Done |
 
 The game ends when neither player has a legal move or after 20 consecutive moves without a capture; moves that loop or exceed 10,000 seed drops are illegal (spec §5.1, §11.2, §20).
 
