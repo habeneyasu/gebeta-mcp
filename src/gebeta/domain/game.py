@@ -1,10 +1,12 @@
-"""Game lifecycle: creating games and executing moves (spec §9).
+"""Game: executes moves against a game state (spec §9).
 
-States are immutable, so `apply_move` builds the new state from fresh values
-and never changes the state it is given. A rejected move leaves no trace.
+`Game.apply_move` computes the move on a working copy of the immutable
+`GameState` and commits it to `Game.state` only on success, so a rejected
+move leaves no trace.
 """
 
 from dataclasses import replace
+from typing import Self
 
 from gebeta.domain import rules
 from gebeta.domain.board import (
@@ -29,32 +31,46 @@ from gebeta.domain.models import (
 from gebeta.domain.sowing import sow
 
 
-def new_game(
-    game_id: str,
-    *,
-    starting_player: Player = DEFAULT_STARTING_PLAYER,
-    limits: Limits = DEFAULT_LIMITS,
-) -> GameState:
-    return GameState(
-        game_id=game_id,
-        board=initial_board(),
-        current_player=starting_player,
-        collected=SeedTotals(),
-        status=GameStatus.ACTIVE,
-        result=None,
-        starting_player=starting_player,
-        limits=limits,
-    )
+class Game:
+    __slots__ = ("state",)
+
+    def __init__(self, state: GameState) -> None:
+        self.state = state
+
+    @classmethod
+    def new(
+        cls,
+        game_id: str,
+        *,
+        starting_player: Player = DEFAULT_STARTING_PLAYER,
+        limits: Limits = DEFAULT_LIMITS,
+    ) -> Self:
+        return cls(
+            GameState(
+                game_id=game_id,
+                board=initial_board(),
+                current_player=starting_player,
+                collected=SeedTotals(),
+                status=GameStatus.ACTIVE,
+                result=None,
+                starting_player=starting_player,
+                limits=limits,
+            )
+        )
+
+    def legal_moves(self) -> tuple[int, ...]:
+        if self.state.current_player is None:
+            return ()
+        return rules.legal_moves(self.state.board, self.state.current_player, self.state.limits)
+
+    def apply_move(self, pit: int) -> MoveResult:
+        """Play `pit` for the current player and commit the result, or raise `MoveError`."""
+        result = _play(self.state, pit)
+        self.state = result.state
+        return result
 
 
-def legal_moves(state: GameState) -> tuple[int, ...]:
-    if state.current_player is None:
-        return ()
-    return rules.legal_moves(state.board, state.current_player, state.limits)
-
-
-def apply_move(state: GameState, pit: int) -> MoveResult:
-    """Play `pit` for the current player, or raise `MoveError` (spec §9)."""
+def _play(state: GameState, pit: int) -> MoveResult:
     player = _check_move(state, pit)
     sowing = sow(state.board, pit, max_drops=state.limits.max_drops)
     board, captured = rules.capture(sowing.board, sowing.landing_pit)
@@ -86,7 +102,7 @@ def apply_move(state: GameState, pit: int) -> MoveResult:
         turn_reason=reason,
         status=status,
     )
-    committed = replace(
+    working_copy = replace(
         state,
         board=board,
         current_player=next_player,
@@ -96,7 +112,7 @@ def apply_move(state: GameState, pit: int) -> MoveResult:
         history=(*state.history, record),
         moves_without_capture=moves_without_capture,
     )
-    return MoveResult(record=record, state=committed)
+    return MoveResult(record=record, state=working_copy)
 
 
 def _check_move(state: GameState, pit: int) -> Player:
