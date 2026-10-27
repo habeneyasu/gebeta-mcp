@@ -16,8 +16,9 @@ def test_error_codes_match_wire_names() -> None:
     }
 
 
-def test_error_codes_compare_equal_to_strings() -> None:
-    assert ErrorCode.SOWING_CYCLE == "sowing_cycle"
+def test_error_codes_are_strings() -> None:
+    assert isinstance(ErrorCode.SOWING_CYCLE, str)
+    assert ErrorCode("sowing_cycle") is ErrorCode.SOWING_CYCLE
 
 
 def test_move_error_carries_code_and_message() -> None:
