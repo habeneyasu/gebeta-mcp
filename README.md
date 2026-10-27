@@ -17,10 +17,10 @@ The project is in phase 1: building the pure domain engine, tested against the a
 | `domain/errors.py` | `MoveError` and error codes | — | Done |
 | `domain/models.py` | Frozen `GameState`, `MoveResult`, `MoveRecord`; seed-count invariant | 34 (partial) | Done |
 | `domain/sowing.py` | Chained sowing, loop detection, 10,000-drop cap | 10–14, 27, 30 | Done |
-| `domain/rules.py` | Legal moves, capture, next player, game end and award | 15–26, 28–29 | Planned |
-| `domain/game.py` | `apply_move()` on a working copy; property tests | 31–36 | Planned |
+| `domain/rules.py` | Legal moves, capture, next player, game end and award | 8, 15–26, 28–33 | Done |
+| `domain/game.py` | `apply_move()` on a working copy; property tests | 9, 31, 34–36, 39 | Done |
 
-The end-of-game rule is still open (spec §20) and must be decided before `rules.py` implements game termination.
+The game ends when neither player has a legal move or after 20 consecutive moves without a capture; moves that loop or exceed 10,000 seed drops are illegal (spec §5.1, §11.2, §20).
 
 ## Development
 
