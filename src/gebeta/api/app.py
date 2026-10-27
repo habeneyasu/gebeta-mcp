@@ -10,11 +10,10 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from gebeta.api.routes import router
-from gebeta.application.game_service import GameNotFoundError, GameService
+from gebeta.application.game_service import GameNotFoundError, GameService, error_out
 from gebeta.config import Settings
 from gebeta.domain.errors import ErrorCode, MoveError
 from gebeta.infrastructure.memory_repository import InMemoryGameRepository
-from gebeta.mapping import error_out
 from gebeta.schemas import ErrorOut
 
 

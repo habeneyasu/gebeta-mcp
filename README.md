@@ -18,10 +18,10 @@ The domain engine and application layer are complete and tested against the acce
 | `domain/sowing.py` | Chained sowing, loop detection, 10,000-drop cap | 10–14, 27, 30 | Done |
 | `domain/rules.py` | Legal moves, capture, next player, game end and award | 8, 15–26, 28–33 | Done |
 | `domain/game.py` | `apply_move()` on a working copy; property tests | 9, 31, 34–36, 39 | Done |
-| `application/` | `GameService` use cases, `GameRepository` port, per-game locks | — | Done |
+| `application/` | `GameService` use cases returning wire schemas, `GameRepository` port, per-game locks | — | Done |
 | `infrastructure/` | `InMemoryGameRepository` | — | Done |
 | `config.py` | `Settings` from `GEBETA_*` environment variables (see `.env.example`) | — | Done |
-| `schemas.py`, `mapping.py` | Pydantic wire contract and domain-to-wire conversion | — | Done |
+| `schemas.py` | Pydantic wire contract shared by the API, MCP server, and MCP client | — | Done |
 | `api/` | FastAPI app: `/games` REST endpoints, `/health`, `ErrorOut` error handling | — | Done |
 
 The game ends when neither player has a legal move or after 20 consecutive moves without a capture; moves that loop or exceed 10,000 seed drops are illegal (spec §5.1, §11.2, §20).

@@ -2,7 +2,7 @@
 
 This module must not import `gebeta.domain`: the MCP client depends on it and
 may reach the game only through MCP (spec §17). Enumerated values are string
-literals kept in sync with the domain enums by tests; `gebeta.mapping`
+literals kept in sync with the domain enums by tests; `GameService`
 converts domain values into these models.
 """
 

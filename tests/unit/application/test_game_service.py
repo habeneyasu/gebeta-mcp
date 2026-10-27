@@ -1,4 +1,4 @@
-"""Game service use cases and per-game locking."""
+"""Game service use cases, wire output, and per-game locking."""
 
 import itertools
 import threading
@@ -7,23 +7,45 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from gebeta.application.game_service import GameNotFoundError, GameService
+from gebeta.application.game_service import GameNotFoundError, GameService, error_out
 from gebeta.domain.errors import ErrorCode, MoveError
-from gebeta.domain.models import GameState, GameStatus, Limits
+from gebeta.domain.models import GameState, Limits
 from gebeta.infrastructure.memory_repository import InMemoryGameRepository
+from gebeta.schemas import (
+    ErrorOut,
+    GameStateOut,
+    LimitsOut,
+    MoveResultOut,
+    PickupOut,
+    SeedTotalsOut,
+)
+from tests.fixtures.positions import board_with, state_with
 
 
-def make_service(**kwargs: object) -> GameService:
+def make_service(limits: Limits | None = None) -> GameService:
     ids = (f"g{n}" for n in itertools.count(1))
-    return GameService(InMemoryGameRepository(), new_game_id=lambda: next(ids), **kwargs)  # type: ignore[arg-type]
+    if limits is None:
+        return GameService(InMemoryGameRepository(), new_game_id=lambda: next(ids))
+    return GameService(InMemoryGameRepository(), limits=limits, new_game_id=lambda: next(ids))
 
 
-def test_create_game_saves_an_active_game() -> None:
+def service_with(state: GameState) -> GameService:
+    """A service whose only game is `state`, saved under the ID "test"."""
+    repository = InMemoryGameRepository()
+    repository.save(state)
+    return GameService(repository)
+
+
+def test_create_game_returns_the_new_state() -> None:
     service = make_service()
     state = service.create_game()
 
-    assert (state.game_id, state.current_player, state.status) == ("g1", 1, GameStatus.ACTIVE)
-    assert service.get_state("g1") is state
+    assert (state.game_id, state.current_player, state.status) == ("g1", 1, "active")
+    assert state.board == [4] * 12
+    assert state.legal_moves == [6, 7, 8, 9, 10, 11]
+    assert state.collected == SeedTotalsOut(player_1=0, player_2=0)
+    assert (state.move_count, state.moves_without_capture, state.result) == (0, 0, None)
+    assert service.get_state("g1") == state
 
 
 def test_create_game_with_player_2_starting() -> None:
@@ -36,14 +58,14 @@ def test_default_ids_are_unique() -> None:
 
 
 def test_games_use_the_configured_limits() -> None:
-    limits = Limits(max_drops=500, max_moves_without_capture=10)
-    assert make_service(limits=limits).create_game().limits == limits
+    state = make_service(Limits(max_drops=500, max_moves_without_capture=10)).create_game()
+    assert state.limits == LimitsOut(max_drops=500, max_moves_without_capture=10)
 
 
 def test_list_games() -> None:
     service = make_service()
     first, second = service.create_game(), service.create_game()
-    assert service.list_games() == (first, second)
+    assert service.list_games() == [first, second]
 
 
 @pytest.mark.parametrize("call", ["get_state", "legal_moves", "history"])
@@ -64,9 +86,40 @@ def test_play_move_saves_the_new_state() -> None:
 
     result = service.play_move("g1", 6)
 
-    assert service.get_state("g1") is result.state
-    assert service.history("g1") == (result.record,)
-    assert service.legal_moves("g1") == (0, 1, 3, 4, 5)
+    assert service.get_state("g1") == result.state
+    assert service.history("g1") == [result.move]
+    assert service.legal_moves("g1") == [0, 1, 3, 4, 5]
+
+
+def test_move_result_describes_the_move() -> None:
+    result = service_with(state_with(board_with(p7=1, p2=2, p9=1))).play_move("test", 7)
+
+    assert result.success is True
+    move = result.move
+    assert (move.move_number, move.player, move.pit, move.seeds_picked_up) == (1, 1, 7, 1)
+    assert move.pickups == [PickupOut(pit=7, seeds=1)]
+    assert (move.landing_pit, move.opposite_pit, move.captured) == (8, 2, 2)
+    assert move.capture_occurred and move.turn_retained
+    assert (move.turn_reason, move.status, move.awarded) == ("capture", "active", None)
+    assert result.state.move_count == 1
+
+
+def test_move_that_ends_the_game() -> None:
+    service = service_with(state_with(board_with(p7=1, p4=1), moves_without_capture=19))
+    result = service.play_move("test", 7)
+
+    assert result.move.turn_reason == "no_capture_limit"
+    assert result.move.awarded == SeedTotalsOut(player_1=1, player_2=1)
+    assert (result.state.status, result.state.result) == ("completed", "player_1_wins")
+    assert (result.state.current_player, result.state.legal_moves) == (None, [])
+
+
+def test_output_survives_a_json_round_trip() -> None:
+    service = make_service()
+    state = service.create_game()
+    result = service.play_move("g1", 6)
+    assert GameStateOut.model_validate_json(state.model_dump_json()) == state
+    assert MoveResultOut.model_validate_json(result.model_dump_json()) == result
 
 
 def test_rejected_move_saves_nothing() -> None:
@@ -77,7 +130,16 @@ def test_rejected_move_saves_nothing() -> None:
         service.play_move("g1", 0)
 
     assert excinfo.value.code is ErrorCode.OPPONENT_PIT
-    assert service.get_state("g1") is state
+    assert service.get_state("g1") == state
+
+
+def test_error_out() -> None:
+    assert error_out(MoveError(ErrorCode.EMPTY_PIT, "Pit 7 is empty.")) == ErrorOut(
+        code="empty_pit", message="Pit 7 is empty."
+    )
+    assert error_out(GameNotFoundError("missing")) == ErrorOut(
+        code="game_not_found", message="Game 'missing' not found."
+    )
 
 
 class SlowRepository(InMemoryGameRepository):

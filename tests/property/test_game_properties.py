@@ -7,7 +7,7 @@ from hypothesis import strategies as st
 
 from gebeta.domain.board import TOTAL_SEEDS
 from gebeta.domain.errors import MoveError
-from gebeta.domain.game import apply_move, legal_moves, new_game
+from gebeta.domain.game import Game
 from gebeta.domain.models import GameStatus
 
 MAX_MOVES = 1_000
@@ -18,27 +18,28 @@ MAX_MOVES = 1_000
 def test_random_games_end_with_48_seeds_and_rejections_change_nothing(
     rng: random.Random, starting_player: int
 ) -> None:
-    state = new_game("p", starting_player=1 if starting_player == 1 else 2)
+    game = Game.new("p", starting_player=1 if starting_player == 1 else 2)
 
     for _ in range(MAX_MOVES):
-        if state.status is GameStatus.COMPLETED:
+        if game.state.status is GameStatus.COMPLETED:
             break
-        assert sum(state.board) + state.collected.total == TOTAL_SEEDS
+        assert sum(game.state.board) + game.state.collected.total == TOTAL_SEEDS
 
-        moves = legal_moves(state)
+        moves = game.legal_moves()
         assert moves, "an active game always offers the current player a move"
         illegal = [pit for pit in range(-1, 13) if pit not in moves]
-        before = state
+        before = game.state
         try:
-            apply_move(state, rng.choice(illegal))
+            game.apply_move(rng.choice(illegal))
         except MoveError:
             pass
         else:
             raise AssertionError("a pit outside legal_moves was accepted")
-        assert state == before
+        assert game.state is before
 
-        state = apply_move(state, rng.choice(moves)).state
+        game.apply_move(rng.choice(moves))
 
+    state = game.state
     assert state.status is GameStatus.COMPLETED
     assert state.board == (0,) * 12
     assert state.collected.total == TOTAL_SEEDS
