@@ -6,17 +6,9 @@ import pytest
 
 from gebeta.domain.board import initial_board
 from gebeta.domain.errors import ErrorCode, MoveError
-from gebeta.domain.models import Pickup
-from gebeta.domain.sowing import DEFAULT_MAX_DROPS, sow
-from tests.fixtures.positions import LOOPING_BOARD, LOOPING_PIT
-
-
-def board_with(**pits: int) -> tuple[int, ...]:
-    """A board that is empty except for the given pits, e.g. board_with(p6=2)."""
-    board = [0] * 12
-    for name, seeds in pits.items():
-        board[int(name.removeprefix("p"))] = seeds
-    return tuple(board)
+from gebeta.domain.models import DEFAULT_MAX_DROPS, Pickup
+from gebeta.domain.sowing import sow
+from tests.fixtures.positions import LOOPING_BOARD, LOOPING_PIT, board_with
 
 
 def test_default_limit_is_10000_drops() -> None:

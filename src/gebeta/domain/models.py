@@ -6,9 +6,12 @@ serialisation at the edges.
 
 from dataclasses import dataclass, replace
 from enum import StrEnum
-from typing import Self
+from typing import Final, Self
 
 from gebeta.domain.board import PIT_COUNT, TOTAL_SEEDS, Player, opposite_pit
+
+DEFAULT_MAX_DROPS: Final = 10_000
+DEFAULT_MAX_MOVES_WITHOUT_CAPTURE: Final = 20
 
 
 class GameStatus(StrEnum):
@@ -23,12 +26,28 @@ class GameResult(StrEnum):
 
 
 class TurnReason(StrEnum):
-    """Why the next player was chosen (spec §11.1)."""
+    """Why the next player was chosen, or why the game ended (spec §11)."""
 
     CAPTURE = "capture"
     TURN_PASSES = "turn_passes"
     OPPONENT_HAS_NO_MOVE = "opponent_has_no_move"
-    GAME_ENDED = "game_ended"
+    NO_LEGAL_MOVES = "no_legal_moves"
+    NO_CAPTURE_LIMIT = "no_capture_limit"
+
+
+@dataclass(frozen=True, slots=True)
+class Limits:
+    """Configurable rule limits (spec §5.1, §11.2), fixed when a game is created."""
+
+    max_drops: int = DEFAULT_MAX_DROPS
+    max_moves_without_capture: int = DEFAULT_MAX_MOVES_WITHOUT_CAPTURE
+
+    def __post_init__(self) -> None:
+        if self.max_drops < 1 or self.max_moves_without_capture < 1:
+            raise ValueError(f"Limits must be at least 1: {self}.")
+
+
+DEFAULT_LIMITS: Final = Limits()
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +68,11 @@ class SeedTotals:
         if player == 1:
             return replace(self, player_1=self.player_1 + seeds)
         return replace(self, player_2=self.player_2 + seeds)
+
+    def __add__(self, other: "SeedTotals") -> Self:
+        return replace(
+            self, player_1=self.player_1 + other.player_1, player_2=self.player_2 + other.player_2
+        )
 
     @property
     def total(self) -> int:
@@ -143,8 +167,12 @@ class GameState:
     result: GameResult | None
     starting_player: Player
     history: tuple[MoveRecord, ...] = ()
+    moves_without_capture: int = 0
+    limits: Limits = DEFAULT_LIMITS
 
     def __post_init__(self) -> None:
+        if self.moves_without_capture < 0:
+            raise ValueError("moves_without_capture cannot be negative.")
         if len(self.board) != PIT_COUNT:
             raise ValueError(f"Board must have {PIT_COUNT} pits, got {len(self.board)}.")
         if any(seeds < 0 for seeds in self.board):

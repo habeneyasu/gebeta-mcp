@@ -5,13 +5,10 @@ game state untouched (spec §5.1).
 """
 
 from collections.abc import Sequence
-from typing import Final
 
 from gebeta.domain.board import PIT_COUNT, is_valid_pit, next_pit
 from gebeta.domain.errors import ErrorCode, MoveError
-from gebeta.domain.models import Pickup, Sowing
-
-DEFAULT_MAX_DROPS: Final = 10_000
+from gebeta.domain.models import DEFAULT_MAX_DROPS, Pickup, Sowing
 
 
 def sow(board: Sequence[int], pit: int, *, max_drops: int = DEFAULT_MAX_DROPS) -> Sowing:
