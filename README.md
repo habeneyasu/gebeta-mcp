@@ -5,11 +5,10 @@ An MCP server for the traditional Gebeta board game, featuring a deterministic P
 ## Documentation
 
 - [Game rules](docs/spec/gebeta-rules.md): the authoritative specification the engine enforces.
-- [Architecture](docs/architecture.md): layers, dependency rules, and design decisions.
 
 ## Status
 
-The project is in phase 1: building the pure domain engine, tested against the acceptance criteria in spec §18 before any API or MCP code is written.
+The domain engine and application layer are complete and tested against the acceptance criteria in spec §18. The API, MCP server, agents, and UI come next.
 
 | Module | Purpose | Criteria (spec §18) | Status |
 |---|---|---|---|
@@ -19,6 +18,8 @@ The project is in phase 1: building the pure domain engine, tested against the a
 | `domain/sowing.py` | Chained sowing, loop detection, 10,000-drop cap | 10–14, 27, 30 | Done |
 | `domain/rules.py` | Legal moves, capture, next player, game end and award | 8, 15–26, 28–33 | Done |
 | `domain/game.py` | `apply_move()` on a working copy; property tests | 9, 31, 34–36, 39 | Done |
+| `application/` | `GameService` use cases, `GameRepository` port, per-game locks | — | Done |
+| `infrastructure/` | `InMemoryGameRepository` | — | Done |
 
 The game ends when neither player has a legal move or after 20 consecutive moves without a capture; moves that loop or exceed 10,000 seed drops are illegal (spec §5.1, §11.2, §20).
 

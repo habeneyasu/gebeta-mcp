@@ -10,5 +10,6 @@ htmlcov/
 dist/
 .import_linter_cache/
 
-# Local documentation (not published)
-docs/
+# Local documentation (not published), except the game rules
+docs/*
+!docs/spec/
