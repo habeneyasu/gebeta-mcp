@@ -15,8 +15,8 @@ The project is in phase 1: building the pure domain engine, tested against the a
 |---|---|---|---|
 | `domain/board.py` | Constants, pit validation, `next_pit`, `opposite_pit`, `pit_owner` | 1–7 | Done |
 | `domain/errors.py` | `MoveError` and error codes | — | Done |
-| `domain/models.py` | Frozen `GameState`, `MoveResult`, `MoveRecord` | — | Planned |
-| `domain/sowing.py` | Chained sowing, loop detection, 10,000-drop cap | 10–14, 27, 30 | Planned |
+| `domain/models.py` | Frozen `GameState`, `MoveResult`, `MoveRecord`; seed-count invariant | 34 (partial) | Done |
+| `domain/sowing.py` | Chained sowing, loop detection, 10,000-drop cap | 10–14, 27, 30 | Done |
 | `domain/rules.py` | Legal moves, capture, next player, game end and award | 15–26, 28–29 | Planned |
 | `domain/game.py` | `apply_move()` on a working copy; property tests | 31–36 | Planned |
 
