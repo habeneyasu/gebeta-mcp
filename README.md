@@ -20,6 +20,8 @@ The domain engine and application layer are complete and tested against the acce
 | `domain/game.py` | `apply_move()` on a working copy; property tests | 9, 31, 34–36, 39 | Done |
 | `application/` | `GameService` use cases, `GameRepository` port, per-game locks | — | Done |
 | `infrastructure/` | `InMemoryGameRepository` | — | Done |
+| `config.py` | `Settings` from `GEBETA_*` environment variables (see `.env.example`) | — | Done |
+| `schemas.py`, `mapping.py` | Pydantic wire contract and domain-to-wire conversion | — | Done |
 
 The game ends when neither player has a legal move or after 20 consecutive moves without a capture; moves that loop or exceed 10,000 seed drops are illegal (spec §5.1, §11.2, §20).
 
