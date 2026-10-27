@@ -1,9 +1,12 @@
-"""FastAPI application factory: one shared `GameService` behind REST (and later MCP and UI).
+"""FastAPI application factory: one shared `GameService` behind REST and MCP (/mcp).
 
 Every failure is returned as `ErrorOut`: 404 for an unknown game, 422 for a
 malformed request or an out-of-range pit, and 409 for a move that conflicts
 with the current game state.
 """
+
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -14,14 +17,27 @@ from gebeta.application.game_service import GameNotFoundError, GameService, erro
 from gebeta.config import Settings
 from gebeta.domain.errors import ErrorCode, MoveError
 from gebeta.infrastructure.memory_repository import InMemoryGameRepository
+from gebeta.mcp.server import create_mcp_server
 from gebeta.schemas import ErrorOut
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
-    app = FastAPI(title="Gebeta", description="Deterministic Gebeta engine for AI agents.")
-    app.state.service = GameService(InMemoryGameRepository(), limits=settings.limits)
+    service = GameService(InMemoryGameRepository(), limits=settings.limits)
+    mcp_server = create_mcp_server(service)
+    mcp_http = mcp_server.streamable_http_app(streamable_http_path="/mcp", host=settings.host)
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        async with mcp_server.session_manager.run():
+            yield
+
+    app = FastAPI(
+        title="Gebeta", description="Deterministic Gebeta engine for AI agents.", lifespan=lifespan
+    )
+    app.state.service = service
     app.include_router(router)
+    app.router.routes.extend(mcp_http.routes)  # MCP over streamable HTTP at /mcp
 
     @app.get("/health", tags=["health"])
     def health() -> dict[str, str]:

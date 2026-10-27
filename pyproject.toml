@@ -38,6 +38,10 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/gebeta"]
 
+# Ship the rules spec for the gebeta://rules MCP resource.
+[tool.hatch.build.targets.wheel.force-include]
+"docs/spec/gebeta-rules.md" = "gebeta/rules.md"
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"
@@ -55,7 +59,7 @@ packages = ["gebeta"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-asyncio_mode = "auto"
+asyncio_mode = "strict"  # async tests use pytest.mark.anyio (see tests/conftest.py)
 pythonpath = ["."]
 
 [tool.importlinter]
